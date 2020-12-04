@@ -1,0 +1,7 @@
+{
+  "prefix": "traceNetworkMap",
+  "paths": {
+    "traceNetworkMap": "."
+  },
+  "translations": ["translations/ja-JP.json"]
+}
