@@ -18,6 +18,7 @@ import {
 
 import { CoreStart } from '../../../../src/core/public';
 import { NavigationPublicPluginStart } from '../../../../src/plugins/navigation/public';
+import { DataPublicPluginStart } from '../../../../src/plugins/data/public';
 
 import { PLUGIN_ID, PLUGIN_NAME } from '../../common';
 
@@ -26,6 +27,7 @@ interface TraceNetworkMapAppDeps {
   notifications: CoreStart['notifications'];
   http: CoreStart['http'];
   navigation: NavigationPublicPluginStart;
+  data: DataPublicPluginStart;
 }
 
 export const TraceNetworkMapApp = ({
@@ -33,11 +35,33 @@ export const TraceNetworkMapApp = ({
   notifications,
   http,
   navigation,
+  data
 }: TraceNetworkMapAppDeps) => {
   // Use React hooks to manage state.
   const [timestamp, setTimestamp] = useState<string | undefined>();
+  const [traces, setTraces] = useState<string[]>([]);
 
-  const onClickHandler = () => {
+  const onClickHandler = async () => {
+
+    // load traces
+    const indexPatternId = (await data.indexPatterns.getIds())[0];
+    const indexPattern = await data.indexPatterns.get(indexPatternId);
+    const searchSource = await data.search.searchSource.create();
+    const searchResponse = await searchSource
+      .setParent(undefined)
+      .setField('index', indexPattern)
+      // .setField('filter', filters)
+      .fetch();
+    // console.log(searchResponse.hits.hits);
+    setTraces(
+      searchResponse
+        .hits
+        .hits
+        .map(
+          hit => `${hit.fields.timestamp_millis[0]}: ${hit._source.name} (${hit._source.duration})`
+        )
+    );
+
     // Use the core http service to make a response to the server API.
     http.get('/api/trace_network_map/example').then((res) => {
       setTimestamp(res.time);
@@ -104,6 +128,9 @@ export const TraceNetworkMapApp = ({
                     <EuiButton type="primary" size="s" onClick={onClickHandler}>
                       <FormattedMessage id="traceNetworkMap.buttonText" defaultMessage="Get data" />
                     </EuiButton>
+                  </EuiText>
+                  <EuiText>
+                    {traces.map(trace => <p key={trace}>{trace}</p>)}
                   </EuiText>
                 </EuiPageContentBody>
               </EuiPageContent>
