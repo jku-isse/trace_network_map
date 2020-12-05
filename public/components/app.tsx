@@ -18,7 +18,9 @@ import {
 
 import { CoreStart } from '../../../../src/core/public';
 import { NavigationPublicPluginStart } from '../../../../src/plugins/navigation/public';
+
 import { DataPublicPluginStart } from '../../../../src/plugins/data/public';
+import CytoscapeComponent from 'react-cytoscapejs';
 
 import { PLUGIN_ID, PLUGIN_NAME } from '../../common';
 
@@ -40,6 +42,7 @@ export const TraceNetworkMapApp = ({
   // Use React hooks to manage state.
   const [timestamp, setTimestamp] = useState<string | undefined>();
   const [traces, setTraces] = useState<string[]>([]);
+  const [elements, setElements] = useState<object[]>([]);
 
   const onClickHandler = async () => {
 
@@ -52,7 +55,6 @@ export const TraceNetworkMapApp = ({
       .setField('index', indexPattern)
       // .setField('filter', filters)
       .fetch();
-    // console.log(searchResponse.hits.hits);
     setTraces(
       searchResponse
         .hits
@@ -61,6 +63,24 @@ export const TraceNetworkMapApp = ({
           hit => `${hit.fields.timestamp_millis[0]}: ${hit._source.name} (${hit._source.duration})`
         )
     );
+
+    // const elements = [
+    //    { data: { id: 'one', label: 'Node 1' }, position: { x: 0, y: 0 } },
+    //    { data: { id: 'two', label: 'Node 2' }, position: { x: 100, y: 0 } },
+    //    { data: { source: 'one', target: 'two', label: 'Edge from Node1 to Node2' } }
+    // ];
+    const nodes: object[] = [];
+    const edges: object[] = [];
+    // console.log(searchResponse.hits.hits);
+    searchResponse.hits.hits.forEach(hit => {
+      nodes.push({ data: { id: hit._source.id, label: hit._source.name.toUpperCase() + (hit._source.tags && hit._source.tags["http.path"] ? ' ' + hit._source.tags["http.path"] : '') }});
+
+      if (hit._source.parentId) {
+        edges.push({ data: { source: hit._source.parentId, target: hit._source.id, label: 'parent' } });
+      }
+    });
+
+    setElements(nodes.concat(edges.filter(edge => nodes.find(node => edge.data.source = node.data.id))));
 
     // Use the core http service to make a response to the server API.
     http.get('/api/trace_network_map/example').then((res) => {
@@ -73,6 +93,8 @@ export const TraceNetworkMapApp = ({
       );
     });
   };
+
+  const layout = { name: 'breadthfirst' };
 
   // Render the application DOM.
   // Note that `navigation.ui.TopNavMenu` is a stateful component exported on the `navigation` plugin's start contract.
@@ -91,7 +113,7 @@ export const TraceNetworkMapApp = ({
                 <EuiTitle size="l">
                   <h1>
                     <FormattedMessage
-                      id="traceNetworkMap.helloWorldText"
+                      id="traceNetworkMap.title"
                       defaultMessage="{name}"
                       values={{ name: PLUGIN_NAME }}
                     />
@@ -103,8 +125,8 @@ export const TraceNetworkMapApp = ({
                   <EuiTitle>
                     <h2>
                       <FormattedMessage
-                        id="traceNetworkMap.congratulationsTitle"
-                        defaultMessage="Congratulations, you have successfully created a new Kibana Plugin!"
+                        id="traceNetworkMap.subtitle"
+                        defaultMessage="Interactive visualization for zipkin traces"
                       />
                     </h2>
                   </EuiTitle>
@@ -114,24 +136,56 @@ export const TraceNetworkMapApp = ({
                     <p>
                       <FormattedMessage
                         id="traceNetworkMap.content"
-                        defaultMessage="Look through the generated code and check out the plugin development documentation."
-                      />
-                    </p>
-                    <EuiHorizontalRule />
-                    <p>
-                      <FormattedMessage
-                        id="traceNetworkMap.timestampText"
-                        defaultMessage="Last timestamp: {time}"
-                        values={{ time: timestamp ? timestamp : 'Unknown' }}
+                        defaultMessage="Click Load to show all the traces in the first index."
                       />
                     </p>
                     <EuiButton type="primary" size="s" onClick={onClickHandler}>
-                      <FormattedMessage id="traceNetworkMap.buttonText" defaultMessage="Get data" />
+                      <FormattedMessage id="traceNetworkMap.buttonText" defaultMessage="Load traces" />
                     </EuiButton>
                   </EuiText>
-                  <EuiText>
-                    {traces.map(trace => <p key={trace}>{trace}</p>)}
-                  </EuiText>
+                  <EuiHorizontalRule />
+                  {
+                    timestamp &&
+                      <EuiText>
+                        <p>
+                          <FormattedMessage
+                            id="traceNetworkMap.timestampText"
+                            defaultMessage="Timestamp: {time}"
+                            values={{ time: timestamp }}
+                          />
+                        </p>
+                      </EuiText>
+                  }
+                  {
+                    elements.length > 0 &&
+                      <>
+                        <EuiTitle>
+                          <h2>
+                            <FormattedMessage
+                              id="traceNetworkMap.graphHeader"
+                              defaultMessage="Network graph"
+                            />
+                          </h2>
+                        </EuiTitle>
+                        <CytoscapeComponent elements={elements} layout={layout} style={{ width: '800px', height: '600px', border: '1px solid black'} } />
+                      </>
+                  }
+                  {
+                    traces.length > 0 &&
+                    <>
+                      <EuiTitle>
+                        <h2>
+                          <FormattedMessage
+                            id="traceNetworkMap.listHeader"
+                            defaultMessage="Trace list"
+                          />
+                        </h2>
+                      </EuiTitle>
+                      <EuiText>
+                        {traces.map(trace => <p key={trace}>{trace}</p>)}
+                      </EuiText>
+                    </>
+                  }
                 </EuiPageContentBody>
               </EuiPageContent>
             </EuiPageBody>
