@@ -2,6 +2,13 @@
 # yarn lockfile v1
 
 
+cytoscape-dagre@^2.3.1:
+  version "2.3.1"
+  resolved "https://registry.yarnpkg.com/cytoscape-dagre/-/cytoscape-dagre-2.3.1.tgz#39fca747a54f0872a94de14ef0dc9ba8fe80b7ef"
+  integrity sha512-6IEs0dzXNuftxhL52oueFExYKQGJDYhhIhPfr0GIHLSTCSBoGwdEeEGWnNdFXh6epv0u+3A6INR+9un/vCiaOg==
+  dependencies:
+    dagre "^0.8.5"
+
 cytoscape@3.17.0, cytoscape@^3.2.19:
   version "3.17.0"
   resolved "https://registry.yarnpkg.com/cytoscape/-/cytoscape-3.17.0.tgz#9dc476636a32e2b6f272ee0620177b933427c571"
@@ -9,6 +16,21 @@ cytoscape@3.17.0, cytoscape@^3.2.19:
   dependencies:
     heap "^0.2.6"
     lodash.debounce "^4.0.8"
+
+dagre@^0.8.5:
+  version "0.8.5"
+  resolved "https://registry.yarnpkg.com/dagre/-/dagre-0.8.5.tgz#ba30b0055dac12b6c1fcc247817442777d06afee"
+  integrity sha512-/aTqmnRta7x7MCCpExk7HQL2O4owCT2h8NT//9I1OQ9vt29Pa0BzSAkR5lwFUcQ7491yVi/3CXU9jQ5o0Mn2Sw==
+  dependencies:
+    graphlib "^2.1.8"
+    lodash "^4.17.15"
+
+graphlib@^2.1.8:
+  version "2.1.8"
+  resolved "https://registry.yarnpkg.com/graphlib/-/graphlib-2.1.8.tgz#5761d414737870084c92ec7b5dbcb0592c9d35da"
+  integrity sha512-jcLLfkpoVGmH7/InMC/1hIvOPSUh38oJtGhvrOFGzioE1DZ+0YW16RgmOJhHiuWTvGiJQ9Z1Ik43JvkRPRvE+A==
+  dependencies:
+    lodash "^4.17.15"
 
 heap@^0.2.6:
   version "0.2.6"
@@ -24,6 +46,11 @@ lodash.debounce@^4.0.8:
   version "4.0.8"
   resolved "https://registry.yarnpkg.com/lodash.debounce/-/lodash.debounce-4.0.8.tgz#82d79bff30a67c4005ffd5e2515300ad9ca4d7af"
   integrity sha1-gteb/zCmfEAF/9XiUVMArZyk168=
+
+lodash@^4.17.15:
+  version "4.17.20"
+  resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.20.tgz#b44a9b6297bcb698f1c51a3545a2b3b368d59c52"
+  integrity sha512-PlhdFcillOINfeV7Ni6oF1TAEayyZBoZ8bcshTHqOYJYlrqzRK5hagpagky5o4HfCzzd1TRkXPMFq6cKk9rGmA==
 
 loose-envify@^1.4.0:
   version "1.4.0"
