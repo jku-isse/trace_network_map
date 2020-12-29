@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect, useRef } from 'react';
 import { FormattedMessage } from '@kbn/i18n/react';
 import { EuiTitle } from '@elastic/eui';
 import { Result } from './filter_form';
@@ -26,6 +26,16 @@ interface NetworkGraphProps {
 }
 
 export const NetworkGraph = ({ results }: NetworkGraphProps) => {
+  const layoutOptions = { name: 'dagre' };
+  let cyRef = useRef(null);
+
+  useEffect(() => {
+    if (cyRef) {
+      const layout = cyRef.layout(layoutOptions);
+      layout.run();
+    }
+  }, [results]);
+
   const nodes: Node[] = [];
   results.forEach(result => {
     const source = result._source;
@@ -43,8 +53,6 @@ export const NetworkGraph = ({ results }: NetworkGraphProps) => {
   });
 
   const elements: (Node|Edge)[] = nodes.concat(edges); // TODO type quirks
-  // const layout = { name: 'breadthfirst' };
-  const layout = { name: 'dagre' };
 
   return (
     <>
@@ -56,7 +64,11 @@ export const NetworkGraph = ({ results }: NetworkGraphProps) => {
           />
         </h2>
       </EuiTitle>
-      <CytoscapeComponent elements={elements} layout={layout} style={{ width: '800px', height: '600px', border: '1px solid black'} } />
+      <CytoscapeComponent
+        elements={elements}
+        layout={layoutOptions}
+        cy={cy => { cyRef = cy; }}
+        style={{ width: '800px', height: '600px', border: '1px solid black'} } />
     </>
   );
 };

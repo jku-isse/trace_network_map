@@ -1,14 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { FormattedMessage } from '@kbn/i18n/react';
-import { DataPublicPluginStart } from '../../../../src/plugins/data/public';
+import { DataPublicPluginStart, IndexPattern, ISearchSource } from '../../../../src/plugins/data/public';
 import {
-  EuiButton,
   EuiSelect,
-  EuiFlexGroup,
-  EuiFlexItem,
   EuiText,
   EuiSelectOption,
+  EuiFormRow,
 } from '@elastic/eui';
+import { i18n } from '@kbn/i18n';
+import {actionFilter, actionTreeFilter} from "../filters";
+import useAsyncEffect from "use-async-effect";
 
 export interface Result {
   fields: {
@@ -32,35 +33,60 @@ interface FilterFormProps {
 
 export const FilterForm = ({ data, onResultsLoaded }: FilterFormProps) => {
   const [indexPatternOptions, setIndexPatternOptions] = useState<EuiSelectOption[]>([]);
-  const [indexId, setIndexId] = useState<string>('');
+  const [actionOptions, setActionOptions] = useState<EuiSelectOption[]>([]);
+  const [indexPattern, setIndexPattern] = useState<IndexPattern>();
+  const [searchSource, setSearchSource] = useState<ISearchSource>();
 
-  useEffect(() => {
-    const fetchOptions = async () => {
-      const ids = await data.indexPatterns.getIdsWithTitle();
-      const options = ids.reverse().map(entry => ({ value: entry.id, text: entry.title }));
-      setIndexPatternOptions(options);
-      setIndexId(options[0].value);
+  async function loadedSearchSource(): Promise<ISearchSource> {
+    if (searchSource) {
+      return searchSource;
+    } else {
+      const source = await data.search.searchSource.create();
+      setSearchSource(source);
+      return source;
     }
-    fetchOptions();
+  }
+
+  useAsyncEffect(async () => {
+    const ids = await data.indexPatterns.getIdsWithTitle();
+    const options = ids.reverse().map(entry => ({ value: entry.id, text: entry.title }));
+    setIndexPatternOptions(options);
   }, []);
 
-  const onChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    setIndexId(event.target.value);
-  };
+  const onIndexPatternChange = async (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const indexPattern = await data.indexPatterns.get(event.target.value);
+    setIndexPattern(indexPattern);
 
-  const onButtonClick = async () => {
-    const indexPattern = await data.indexPatterns.get(indexId);
-    const searchSource = await data.search.searchSource.create();
-    const searchResponse = await searchSource
+    const search = await loadedSearchSource();
+    const searchResponse = await search
       .setParent(undefined)
       .setField('index', indexPattern)
       .setField('size', 100)
-      // .setField('filter', filters)
+      .setField('filter', actionFilter())
+      // .setField('fields', ['name', '', ...]) // TODO filter the needed fields
       .fetch();
+    // see /home/noah/se-project/kibana/src/plugins/data/common/search/search_source/types.ts for a good overview of possible fields
 
-    console.log(searchResponse);
+    const actionOptions = searchResponse.hits.hits.map(hit => ({ value: hit._source.traceId, text: hit._source.name }));
+    setActionOptions(actionOptions);
+  };
 
-    onResultsLoaded(searchResponse.hits.hits);
+  const onActionChange = async (event: React.ChangeEvent<HTMLSelectElement>) => {
+    if (indexPattern) {
+      const actionTraceId = event.target.value;
+      const search = await loadedSearchSource();
+      const searchResponse = await search
+        .setParent(undefined)
+        .setField('index', indexPattern)
+        .setField('size', 100)
+        .setField('filter', actionTreeFilter(actionTraceId))
+        // .setField('fields', ['name', '', ...]) // TODO filter the needed fields
+        .fetch();
+
+      onResultsLoaded(searchResponse.hits.hits);
+    } else {
+      console.error("No indexPattern");
+    }
   };
 
   return (
@@ -69,23 +95,28 @@ export const FilterForm = ({ data, onResultsLoaded }: FilterFormProps) => {
         <p>
           <FormattedMessage
             id="traceNetworkMap.content"
-            defaultMessage="Select an index pattern and load the traces!"
+            defaultMessage="Select an index pattern and load the network graph for a specific action!"
           />
         </p>
       </EuiText>
-      <EuiFlexGroup>
-        <EuiFlexItem>
-          <EuiSelect
-            options={indexPatternOptions}
-            onChange={onChange}
-          />
-        </EuiFlexItem>
-        <EuiFlexItem>
-          <EuiButton type="primary" size="s" onClick={onButtonClick}>
-            <FormattedMessage id="traceNetworkMap.buttonText" defaultMessage="Load traces" />
-          </EuiButton>
-        </EuiFlexItem>
-      </EuiFlexGroup>
+
+      <EuiFormRow
+        label={i18n.translate('traceNetworkMap.indexPatternLabel', {defaultMessage: 'Index pattern'})}>
+        <EuiSelect
+          hasNoInitialSelection
+          options={indexPatternOptions}
+          onChange={onIndexPatternChange}
+        />
+      </EuiFormRow>
+
+      <EuiFormRow
+        label={i18n.translate('traceNetworkMap.actionLabel', {defaultMessage: 'Action'})}>
+        <EuiSelect
+          hasNoInitialSelection
+          options={actionOptions}
+          onChange={onActionChange}
+        />
+      </EuiFormRow>
     </>
   );
 };
