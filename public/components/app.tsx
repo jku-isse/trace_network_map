@@ -13,7 +13,7 @@ import {
   EuiTitle,
 } from '@elastic/eui';
 
-import { CoreStart } from '../../../../src/core/public';
+import { CoreStart } from 'kibana/public';
 import { NavigationPublicPluginStart } from '../../../../src/plugins/navigation/public';
 
 import { DataPublicPluginStart } from '../../../../src/plugins/data/public';

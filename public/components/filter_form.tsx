@@ -63,9 +63,7 @@ export const FilterForm = ({ data, onResultsLoaded }: FilterFormProps) => {
       .setField('index', indexPattern)
       .setField('size', 100)
       .setField('filter', actionFilter())
-      // .setField('fields', ['name', '', ...]) // TODO filter the needed fields
       .fetch();
-    // see /home/noah/se-project/kibana/src/plugins/data/common/search/search_source/types.ts for a good overview of possible fields
 
     const actionOptions = searchResponse.hits.hits.map(hit => ({ value: hit._source.traceId, text: hit._source.name }));
     setActionOptions(actionOptions);
@@ -80,7 +78,6 @@ export const FilterForm = ({ data, onResultsLoaded }: FilterFormProps) => {
         .setField('index', indexPattern)
         .setField('size', 100)
         .setField('filter', actionTreeFilter(actionTraceId))
-        // .setField('fields', ['name', '', ...]) // TODO filter the needed fields
         .fetch();
 
       onResultsLoaded(searchResponse.hits.hits);
