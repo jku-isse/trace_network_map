@@ -47,14 +47,8 @@ export const FilterForm = ({ data, onResultsLoaded }: FilterFormProps) => {
     }
   }
 
-  useAsyncEffect(async () => {
-    const ids = await data.indexPatterns.getIdsWithTitle();
-    const options = ids.reverse().map(entry => ({ value: entry.id, text: entry.title }));
-    setIndexPatternOptions(options);
-  }, []);
-
-  const onIndexPatternChange = async (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const indexPattern = await data.indexPatterns.get(event.target.value);
+  async function useIndexPattern(patternId: string) {
+    const indexPattern = await data.indexPatterns.get(patternId);
     setIndexPattern(indexPattern);
 
     const search = await loadedSearchSource();
@@ -67,20 +61,41 @@ export const FilterForm = ({ data, onResultsLoaded }: FilterFormProps) => {
 
     const actionOptions = searchResponse.hits.hits.map(hit => ({ value: hit._source.traceId, text: hit._source.name }));
     setActionOptions(actionOptions);
+
+    if (actionOptions.length > 0) {
+      await useAction(actionOptions[0].value, indexPattern);
+    }
+  }
+
+  async function useAction(actionTraceId: string, indexPattern: IndexPattern) {
+    const search = await loadedSearchSource();
+    const searchResponse = await search
+      .setParent(undefined)
+      .setField('index', indexPattern)
+      .setField('size', 100)
+      .setField('filter', actionTreeFilter(actionTraceId))
+      .fetch();
+
+    onResultsLoaded(searchResponse.hits.hits);
+  }
+
+  useAsyncEffect(async () => {
+    const ids = await data.indexPatterns.getIdsWithTitle();
+    const options = ids.reverse().map(entry => ({ value: entry.id, text: entry.title }));
+    setIndexPatternOptions(options);
+
+    if (options.length > 0) {
+      await useIndexPattern(options[0].value);
+    }
+  }, []);
+
+  const onIndexPatternChange = async (event: React.ChangeEvent<HTMLSelectElement>) => {
+    await useIndexPattern(event.target.value);
   };
 
   const onActionChange = async (event: React.ChangeEvent<HTMLSelectElement>) => {
     if (indexPattern) {
-      const actionTraceId = event.target.value;
-      const search = await loadedSearchSource();
-      const searchResponse = await search
-        .setParent(undefined)
-        .setField('index', indexPattern)
-        .setField('size', 100)
-        .setField('filter', actionTreeFilter(actionTraceId))
-        .fetch();
-
-      onResultsLoaded(searchResponse.hits.hits);
+      await useAction(event.target.value, indexPattern);
     } else {
       console.error("No indexPattern");
     }
@@ -100,7 +115,6 @@ export const FilterForm = ({ data, onResultsLoaded }: FilterFormProps) => {
       <EuiFormRow
         label={i18n.translate('traceNetworkMap.indexPatternLabel', {defaultMessage: 'Index pattern'})}>
         <EuiSelect
-          hasNoInitialSelection
           options={indexPatternOptions}
           onChange={onIndexPatternChange}
         />
@@ -109,7 +123,6 @@ export const FilterForm = ({ data, onResultsLoaded }: FilterFormProps) => {
       <EuiFormRow
         label={i18n.translate('traceNetworkMap.actionLabel', {defaultMessage: 'Action'})}>
         <EuiSelect
-          hasNoInitialSelection
           options={actionOptions}
           onChange={onActionChange}
         />
