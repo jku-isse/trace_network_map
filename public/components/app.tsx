@@ -14,9 +14,9 @@ import {
 } from '@elastic/eui';
 
 import { CoreStart } from 'kibana/public';
-import { NavigationPublicPluginStart } from '../../../../src/plugins/navigation/public';
+import { NavigationPublicPluginStart } from 'src/plugins/navigation/public';
 
-import { DataPublicPluginStart } from '../../../../src/plugins/data/public';
+import { DataPublicPluginStart } from 'src/plugins/data/public';
 
 import { PLUGIN_ID, PLUGIN_NAME } from '../../common';
 

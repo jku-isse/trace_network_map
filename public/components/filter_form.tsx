@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FormattedMessage } from '@kbn/i18n/react';
-import { DataPublicPluginStart, IndexPattern, ISearchSource } from '../../../../src/plugins/data/public';
+import { DataPublicPluginStart, IndexPattern, ISearchSource } from 'src/plugins/data/public';
 import {
   EuiSelect,
   EuiText,
@@ -8,7 +8,7 @@ import {
   EuiFormRow,
 } from '@elastic/eui';
 import { i18n } from '@kbn/i18n';
-import {actionFilter, actionTreeFilter} from "../filters";
+import {actionFilter, actionTreeFilter} from "../search/filters";
 import useAsyncEffect from "use-async-effect";
 
 export interface Result {
