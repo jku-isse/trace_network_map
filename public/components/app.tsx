@@ -46,6 +46,9 @@ export const TraceNetworkMapApp = ({
     setResults(results);
   };
 
+  const params = new URLSearchParams(window.location.search);
+  const enableTimeFilter = params.get('enableTimeFilter') !== 'false';
+
   // Render the application DOM.
   // Note that `navigation.ui.TopNavMenu` is a stateful component exported on the `navigation` plugin's start contract.
   return (
@@ -83,7 +86,7 @@ export const TraceNetworkMapApp = ({
                 </EuiPageContentHeader>
                 <EuiPageContentBody>
                   <BackendFetchExample http={http} notifications={notifications} />
-                  <FilterForm data={data} onResultsLoaded={onResultsLoaded} />
+                  <FilterForm data={data} onResultsLoaded={onResultsLoaded} enableTimeFilter={enableTimeFilter} />
                   <EuiHorizontalRule />
                   {
                     results &&

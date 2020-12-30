@@ -7,7 +7,6 @@ type SvgNode = {
 export function render(serviceName:string, name: string): SvgNode {
   const width = 200;
   const height = 60;
-  // const backgroundColor = `#33362F`;
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
       <style>

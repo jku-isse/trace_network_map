@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FormattedMessage } from '@kbn/i18n/react';
-import { DataPublicPluginStart, IndexPattern, ISearchSource } from 'src/plugins/data/public';
+import { DataPublicPluginStart, Filter, IndexPattern, ISearchSource } from 'src/plugins/data/public';
 import {
   EuiSelect,
   EuiText,
@@ -29,13 +29,16 @@ export interface Result {
 interface FilterFormProps {
   data: DataPublicPluginStart;
   onResultsLoaded: CallableFunction;
+  enableTimeFilter?: boolean;
 }
 
-export const FilterForm = ({ data, onResultsLoaded }: FilterFormProps) => {
+export const FilterForm = ({ data, onResultsLoaded, enableTimeFilter = true }: FilterFormProps) => {
   const [indexPatternOptions, setIndexPatternOptions] = useState<EuiSelectOption[]>([]);
   const [actionOptions, setActionOptions] = useState<EuiSelectOption[]>([]);
   const [indexPattern, setIndexPattern] = useState<IndexPattern>();
   const [searchSource, setSearchSource] = useState<ISearchSource>();
+
+  let indexPatternId: string; // can't be state because it wouldn't receive the updates correctly
 
   async function loadedSearchSource(): Promise<ISearchSource> {
     if (searchSource) {
@@ -48,15 +51,24 @@ export const FilterForm = ({ data, onResultsLoaded }: FilterFormProps) => {
   }
 
   async function useIndexPattern(patternId: string) {
+    indexPatternId = patternId;
+
     const indexPattern = await data.indexPatterns.get(patternId);
     setIndexPattern(indexPattern);
+
+    const filters: Filter[] = data.query.filterManager.getGlobalFilters();
+    filters.push(actionFilter());
+    if (enableTimeFilter) {
+      const timeFilter = data.query.timefilter.timefilter.createFilter(indexPattern) as Filter;
+      filters.push(timeFilter);
+    }
 
     const search = await loadedSearchSource();
     const searchResponse = await search
       .setParent(undefined)
       .setField('index', indexPattern)
       .setField('size', 100)
-      .setField('filter', actionFilter())
+      .setField('filter', filters)
       .fetch();
 
     const actionOptions = searchResponse.hits.hits.map(hit => ({ value: hit._source.traceId, text: hit._source.name }));
@@ -87,7 +99,20 @@ export const FilterForm = ({ data, onResultsLoaded }: FilterFormProps) => {
     if (options.length > 0) {
       await useIndexPattern(options[0].value);
     }
-  }, []);
+
+    if (enableTimeFilter) {
+      // subscribe to various events to reload the actions based on the current time filter
+      data.query.timefilter.timefilter.getFetch$().subscribe(onTimeFilterFetchRequest); // fired after regular timespan selection
+      data.query.timefilter.timefilter.getAutoRefreshFetch$().subscribe(onTimeFilterFetchRequest); // fired after every auto refresh (calendar icon)
+      data.query.timefilter.timefilter.getTimeUpdate$().subscribe(onTimeFilterFetchRequest); // fired after quick selection (calendar icon)
+    }
+  }, [enableTimeFilter]);
+
+  const onTimeFilterFetchRequest = async () => {
+    if (indexPatternId) {
+      await useIndexPattern(indexPatternId); // also uses the selected time filter
+    }
+  }
 
   const onIndexPatternChange = async (event: React.ChangeEvent<HTMLSelectElement>) => {
     await useIndexPattern(event.target.value);
