@@ -8,7 +8,7 @@ import {
   EuiFormRow,
 } from '@elastic/eui';
 import { i18n } from '@kbn/i18n';
-import {actionFilter, actionTreeFilter} from "../search/filters";
+import {rootTraceFilter, traceIdFilter} from "../search/filters";
 import useAsyncEffect from "use-async-effect";
 
 export interface Result {
@@ -34,7 +34,7 @@ interface FilterFormProps {
 
 export const FilterForm = ({ data, onResultsLoaded, enableTimeFilter = true }: FilterFormProps) => {
   const [indexPatternOptions, setIndexPatternOptions] = useState<EuiSelectOption[]>([]);
-  const [actionOptions, setActionOptions] = useState<EuiSelectOption[]>([]);
+  const [pageOptions, setPageOptions] = useState<EuiSelectOption[]>([]);
   const [indexPattern, setIndexPattern] = useState<IndexPattern>();
   const [searchSource, setSearchSource] = useState<ISearchSource>();
 
@@ -57,7 +57,7 @@ export const FilterForm = ({ data, onResultsLoaded, enableTimeFilter = true }: F
     setIndexPattern(indexPattern);
 
     const filters: Filter[] = data.query.filterManager.getGlobalFilters();
-    filters.push(actionFilter());
+    filters.push(rootTraceFilter());
     if (enableTimeFilter) {
       const timeFilter = data.query.timefilter.timefilter.createFilter(indexPattern) as Filter;
       filters.push(timeFilter);
@@ -71,24 +71,39 @@ export const FilterForm = ({ data, onResultsLoaded, enableTimeFilter = true }: F
       .setField('filter', filters)
       .fetch();
 
-    const actionOptions = searchResponse.hits.hits.map(hit => ({ value: hit._source.traceId, text: hit._source.name }));
-    setActionOptions(actionOptions);
+    if (searchResponse.hits.total > 0) {
+      const pageOptionMap = new Map();
+      searchResponse.hits.hits.forEach(hit => {
+        if (('tags' in hit._source) && ('page' in hit._source.tags)) {
+          const page = hit._source.tags.page;
+          if (pageOptionMap.has(page)) {
+            pageOptionMap.get(page).push(hit._source.traceId);
+          } else {
+            pageOptionMap.set(page, [ hit._source.traceId ]);
+          }
+        }
+      });
 
-    if (actionOptions.length > 0) {
-      await useAction(actionOptions[0].value, indexPattern);
+      const pageOptions = [...pageOptionMap.keys()]
+        .sort()
+        .map(key => ({ value: pageOptionMap.get(key).join(','), text: key}));
+
+      setPageOptions(pageOptions);
+
+      await usePage(pageOptions[0].text, pageOptions[0].value.split(','), indexPattern);
     }
   }
 
-  async function useAction(actionTraceId: string, indexPattern: IndexPattern) {
+  async function usePage(page: string, actionTraceIds: Array<string>, indexPattern: IndexPattern) {
     const search = await loadedSearchSource();
     const searchResponse = await search
       .setParent(undefined)
       .setField('index', indexPattern)
       .setField('size', 100)
-      .setField('filter', actionTreeFilter(actionTraceId))
+      .setField('filter', traceIdFilter(actionTraceIds))
       .fetch();
 
-    onResultsLoaded(searchResponse.hits.hits);
+    onResultsLoaded(page, searchResponse.hits.hits);
   }
 
   useAsyncEffect(async () => {
@@ -120,7 +135,11 @@ export const FilterForm = ({ data, onResultsLoaded, enableTimeFilter = true }: F
 
   const onActionChange = async (event: React.ChangeEvent<HTMLSelectElement>) => {
     if (indexPattern) {
-      await useAction(event.target.value, indexPattern);
+      await usePage(
+        event.target.options[event.target.selectedIndex].innerHTML,
+        event.target.value.split(','),
+        indexPattern
+      );
     } else {
       console.error("No indexPattern");
     }
@@ -132,7 +151,7 @@ export const FilterForm = ({ data, onResultsLoaded, enableTimeFilter = true }: F
         <p>
           <FormattedMessage
             id="traceNetworkMap.content"
-            defaultMessage="Select an index pattern and load the network graph for a specific action!"
+            defaultMessage="Select an index pattern and load the network graph for a specific page!"
           />
         </p>
       </EuiText>
@@ -145,13 +164,28 @@ export const FilterForm = ({ data, onResultsLoaded, enableTimeFilter = true }: F
         />
       </EuiFormRow>
 
-      <EuiFormRow
-        label={i18n.translate('traceNetworkMap.actionLabel', {defaultMessage: 'Action'})}>
-        <EuiSelect
-          options={actionOptions}
-          onChange={onActionChange}
-        />
-      </EuiFormRow>
+      {
+        pageOptions.length > 0
+        ? (
+            <EuiFormRow
+              label={i18n.translate('traceNetworkMap.pageLabel', {defaultMessage: 'Page'})}>
+              <EuiSelect
+                options={pageOptions}
+                onChange={onActionChange}
+              />
+            </EuiFormRow>
+        )
+        : (
+          <EuiText>
+            <p>
+              <FormattedMessage
+                id="traceNetworkMap.noPageTraces"
+                defaultMessage="There are no traces with a 'page' tag that match the given time filter!"
+              />
+            </p>
+          </EuiText>
+        )
+      }
     </>
   );
 };

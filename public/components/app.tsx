@@ -41,8 +41,10 @@ export const TraceNetworkMapApp = ({
   data
 }: TraceNetworkMapAppDeps) => {
   const [results, setResults] = useState<Result[]>();
+  const [page, setPage] = useState<string>();
 
-  const onResultsLoaded = async (results: Result[]) => {
+  const onResultsLoaded = async (page: string, results: Result[]) => {
+    setPage(page);
     setResults(results);
   };
 
@@ -89,9 +91,9 @@ export const TraceNetworkMapApp = ({
                   <FilterForm data={data} onResultsLoaded={onResultsLoaded} enableTimeFilter={enableTimeFilter} />
                   <EuiHorizontalRule />
                   {
-                    results &&
+                    results && page &&
                       <>
-                        <NetworkGraph results={results} />
+                        <NetworkGraph results={results} page={page} />
                         <TraceList results={results} />
                       </>
                   }

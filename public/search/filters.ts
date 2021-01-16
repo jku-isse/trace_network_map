@@ -1,6 +1,6 @@
 import { Filter } from 'src/plugins/data/public';
 
-export function actionFilter(): Filter {
+export function rootTraceFilter(): Filter {
   return {
     query: {
       exists: {
@@ -15,11 +15,15 @@ export function actionFilter(): Filter {
   };
 }
 
-export function actionTreeFilter(actionTraceId: string): Filter {
+export function traceIdFilter(traceIds: Array<string>): Filter {
   return {
     query: {
-      match_phrase: {
-        traceId: actionTraceId
+      bool: {
+        should: traceIds.map(traceId => ({
+          match_phrase: {
+            traceId: traceId
+          }
+        }))
       }
     },
     meta: {

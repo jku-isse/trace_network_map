@@ -11,10 +11,11 @@ import {render} from "../graph/svg_node";
 Cytoscape.use(Dagre);
 
 interface NetworkGraphProps {
+  page: string,
   results: Result[];
 }
 
-export const NetworkGraph = ({ results }: NetworkGraphProps) => {
+export const NetworkGraph = ({ results, page }: NetworkGraphProps) => {
   const layoutOptions = { name: 'dagre' };
   const cyRef = useRef<Core>();
 
@@ -23,6 +24,12 @@ export const NetworkGraph = ({ results }: NetworkGraphProps) => {
 
   useEffect(() => {
     if (cyRef.current) {
+      const rootNode = cyRef.current.getElementById('root');
+      const newRootNode = render('page', page);
+      rootNode.style('background-image', newRootNode.dataImage);
+      rootNode.style('width', newRootNode.width);
+      rootNode.style('height', newRootNode.height);
+
       const layout = cyRef.current.layout(layoutOptions);
       layout.run();
 
@@ -37,9 +44,20 @@ export const NetworkGraph = ({ results }: NetworkGraphProps) => {
         cyRef.current.removeListener('tap', 'node');
       }
     };
-  }, [results]);
+  }, [page, results]);
 
   const nodes: NodeDefinition[] = [];
+
+  const rootNode = render('page', page);
+  nodes.push({
+    data: { id: 'root', label: '' },
+    style: {
+      'background-image': rootNode.dataImage,
+      width: rootNode.width,
+      height: rootNode.height,
+    }
+  });
+
   results.forEach(result => {
     const source = result._source;
     const serviceName = source.remoteEndpoint ? source.remoteEndpoint.serviceName : source.localEndpoint.serviceName;
@@ -58,11 +76,15 @@ export const NetworkGraph = ({ results }: NetworkGraphProps) => {
 
   const edges: EdgeDefinition[] = [];
   results.forEach(result => {
-    results.forEach(parentCandidate => {
-      if (result._source.parentId === parentCandidate._source.id) {
-        edges.push({ data: {source: parentCandidate._source.id, target: result._source.id}});
-      }
-    });
+    if (!result._source.parentId) {
+      edges.push({ data: {source: 'root', target: result._source.id}});
+    } else {
+      results.forEach(parentCandidate => {
+        if (result._source.parentId === parentCandidate._source.id) {
+          edges.push({ data: {source: parentCandidate._source.id, target: result._source.id}});
+        }
+      });
+    }
   });
 
   const styles: StylesheetStyle[] = [
