@@ -62,7 +62,7 @@ export const TraceNetworkMapApp = ({
             showSearchBar={true}
             useDefaultBehaviors={true}
           />
-          <EuiPage restrictWidth="1000px">
+          <EuiPage restrictWidth="1600px">
             <EuiPageBody>
               <EuiPageHeader>
                 <EuiTitle size="l">

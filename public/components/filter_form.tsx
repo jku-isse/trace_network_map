@@ -11,19 +11,25 @@ import { i18n } from '@kbn/i18n';
 import {rootTraceFilter, traceIdFilter} from "../search/filters";
 import useAsyncEffect from "use-async-effect";
 
+export enum Kind {
+  Client = 'CLIENT',
+  Server = 'SERVER',
+}
+
+export interface ResultSource {
+  id:string;
+  parentId:string;
+  name:string;
+  tags: { 'http.path': string|null };
+  duration: string;
+  localEndpoint: { serviceName: string; };
+  remoteEndpoint: { serviceName: string; } | null;
+  kind?: Kind;
+}
+
 export interface Result {
-  fields: {
-    timestamp_millis: string[];
-  }
-  _source: {
-    id:string;
-    parentId:string;
-    name:string;
-    tags: { 'http.path': string|null };
-    duration: string;
-    localEndpoint: { serviceName: string; };
-    remoteEndpoint: { serviceName: string; } | null;
-  }
+  fields: { timestamp_millis: string[] };
+  _source: ResultSource;
 }
 
 interface FilterFormProps {

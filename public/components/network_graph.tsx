@@ -7,6 +7,8 @@ import CytoscapeComponent from 'react-cytoscapejs';
 // @ts-ignore no need to define types because the layout is only used by cytoscape
 import Dagre from 'cytoscape-dagre';
 import {render} from "../graph/svg_node";
+import {useWindowSize} from "../hooks/window_size";
+import {getServiceNodeId, NodeData, nodesFromResults} from "../node_list";
 
 Cytoscape.use(Dagre);
 
@@ -17,74 +19,92 @@ interface NetworkGraphProps {
 
 export const NetworkGraph = ({ results, page }: NetworkGraphProps) => {
   const layoutOptions = { name: 'dagre' };
+
   const cyRef = useRef<Core>();
 
-  const nodeData = new Map();
   const [selectedNodeData, setSelectedNodeData] = useState<string>();
+
+  const windowSize = useWindowSize();
+
+  const nodeDataElements = nodesFromResults(page, results);
+  const nodeDataMap = new Map<string, NodeData>();
+  nodeDataElements.forEach(node => {
+    nodeDataMap.set(node.id, node);
+    node.hiddenChildren?.forEach(child => { nodeDataMap.set(child.id, child); });
+  });
+
+  function onNodeTap(event: Cytoscape.EventObject) {
+    const nodeData = nodeDataMap.get(event.target.id());
+    if (nodeData) {
+      if (nodeData.data) {
+        setSelectedNodeData(JSON.stringify(nodeData.data, undefined, 4));
+      }
+      if (nodeData.hiddenChildren) {
+        if (nodeData.expanded) {
+          nodeData.hiddenChildren.forEach(child => {
+            if (cyRef.current) {
+              cyRef.current.remove(cyRef.current?.getElementById(child.id));
+            }
+          });
+          nodeData.expanded = false;
+        } else {
+          nodeData.hiddenChildren.forEach(child => {
+            const node = render(child.serviceName, child.title);
+            if (cyRef.current) {
+              cyRef.current.add({
+                data: {id: child.id, label: ''},
+                style: {
+                  'background-image': node.dataImage,
+                  width: node.width,
+                  height: node.height,
+                }
+              })
+              cyRef.current.add({data: {source: getServiceNodeId(nodeData), target: child.id}});
+            }
+          });
+          nodeData.expanded = true;
+        }
+        if (cyRef.current) {
+          const layout = cyRef.current.layout(layoutOptions);
+          layout.run();
+        }
+      }
+    }
+  }
 
   useEffect(() => {
     if (cyRef.current) {
-      const rootNode = cyRef.current.getElementById('root');
-      const newRootNode = render('page', page);
-      rootNode.style('background-image', newRootNode.dataImage);
-      rootNode.style('width', newRootNode.width);
-      rootNode.style('height', newRootNode.height);
-
       const layout = cyRef.current.layout(layoutOptions);
       layout.run();
 
-      cyRef.current.on('tap', 'node', (event) => {
-        setSelectedNodeData(nodeData.get(event.target.id()));
-      });
+      cyRef.current.on('tap', 'node', onNodeTap);
     }
 
     return () => {
       setSelectedNodeData('');
-      if (cyRef.current) {
-        cyRef.current.removeListener('tap', 'node');
-      }
+      cyRef.current?.removeListener('tap', 'node');
     };
   }, [page, results]);
 
-  const nodes: NodeDefinition[] = [];
-
-  const rootNode = render('page', page);
-  nodes.push({
-    data: { id: 'root', label: '' },
-    style: {
-      'background-image': rootNode.dataImage,
-      width: rootNode.width,
-      height: rootNode.height,
-    }
-  });
-
-  results.forEach(result => {
-    const source = result._source;
-    const serviceName = source.remoteEndpoint ? source.remoteEndpoint.serviceName : source.localEndpoint.serviceName;
-    const node = render(serviceName, source.name);
-    nodes.push({
-      data: { id: source.id, label: '' },
+  const nodes: NodeDefinition[] = nodeDataElements.map(element => {
+    const node = render(element.serviceName, element.title);
+    return {
+      data: { id: element.id, label: '' },
       style: {
         'background-image': node.dataImage,
         width: node.width,
         height: node.height,
       }
-    });
-
-    nodeData.set(source.id, JSON.stringify(source, undefined, 4));
+    };
   });
 
   const edges: EdgeDefinition[] = [];
-  results.forEach(result => {
-    if (!result._source.parentId) {
-      edges.push({ data: {source: 'root', target: result._source.id}});
-    } else {
-      results.forEach(parentCandidate => {
-        if (result._source.parentId === parentCandidate._source.id) {
-          edges.push({ data: {source: parentCandidate._source.id, target: result._source.id}});
-        }
-      });
-    }
+  nodeDataElements.filter(element => 'parentId' in element).forEach(element => {
+    nodeDataElements.forEach(parentCandidate => {
+      if (element.parentId === parentCandidate.id) {
+        edges.push({ data: {source: parentCandidate.id, target: element.id}});
+      }
+    });
   });
 
   const styles: StylesheetStyle[] = [
@@ -117,7 +137,11 @@ export const NetworkGraph = ({ results, page }: NetworkGraphProps) => {
         elements={[...nodes, ...edges]}
         layout={layoutOptions}
         cy={(cy: Core) => { cyRef.current = cy; }}
-        style={{ width: '800px', height: '600px', border: '1px solid black' }}
+        style={{
+          width: Math.min(windowSize.width - 100, 1500) + 'px',
+          height: '600px',
+          border: '1px solid black'
+        }}
         stylesheet={styles}
       />
       <EuiTitle>
