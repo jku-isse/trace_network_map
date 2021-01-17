@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { FormattedMessage, I18nProvider } from '@kbn/i18n/react';
 import { BrowserRouter as Router } from 'react-router-dom';
-import { i18n } from '@kbn/i18n';
 
 import {
   EuiPage,
@@ -37,18 +36,11 @@ export const TraceNetworkMapApp = ({
   data
 }: TraceNetworkMapAppDeps) => {
   const [results, setResults] = useState<Result[]>();
-  const [page, setPage] = useState<string>();
+  const [page, setPage] = useState<string|null>();
 
   const onResultsLoaded = async (page: string, results: Result[]) => {
     setPage(page);
     setResults(results);
-
-    notifications.toasts.addSuccess(
-      i18n.translate(
-        'traceNetworkMap.foundTraces',
-        {defaultMessage: 'Found {count} traces for page {page}.', values: {count: results.length, page}}
-      )
-    );
   };
 
   const params = new URLSearchParams(window.location.search);
@@ -80,7 +72,11 @@ export const TraceNetworkMapApp = ({
               </EuiPageHeader>
               <EuiPageContent>
                 <EuiPageContentBody>
-                  <FilterForm data={data} onResultsLoaded={onResultsLoaded} enableTimeFilter={enableTimeFilter} />
+                  <FilterForm
+                    data={data}
+                    onResultsLoaded={onResultsLoaded}
+                    enableTimeFilter={enableTimeFilter}
+                    notifications={notifications} />
                   <EuiSpacer size="m" />
                   { results && page && <NetworkGraph results={results} page={page} /> }
                 </EuiPageContentBody>

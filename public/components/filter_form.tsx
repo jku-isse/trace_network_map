@@ -11,6 +11,7 @@ import {
 import { i18n } from '@kbn/i18n';
 import {rootTraceFilter, traceIdFilter} from "../search/filters";
 import useAsyncEffect from "use-async-effect";
+import {CoreStart, Toast} from "kibana/public";
 
 export enum Kind {
   Client = 'CLIENT',
@@ -47,15 +48,23 @@ interface FilterFormProps {
   data: DataPublicPluginStart;
   onResultsLoaded: CallableFunction;
   enableTimeFilter?: boolean;
+  notifications: CoreStart['notifications'];
 }
 
-export const FilterForm = ({ data, onResultsLoaded, enableTimeFilter = true }: FilterFormProps) => {
+let toasts: Array<Toast> = [];
+
+export const FilterForm = ({ data, onResultsLoaded, notifications, enableTimeFilter = true }: FilterFormProps) => {
   const [indexPatternOptions, setIndexPatternOptions] = useState<EuiSelectOption[]>([]);
   const [pageOptions, setPageOptions] = useState<EuiSelectOption[]>([]);
   const [indexPattern, setIndexPattern] = useState<IndexPattern>();
   const [searchSource, setSearchSource] = useState<ISearchSource>();
 
   let indexPatternId: string; // can't be state because it wouldn't receive the updates correctly
+
+  function eatToasts() {
+    toasts.forEach(toast => { notifications.toasts.remove(toast); });
+    toasts = [];
+  }
 
   async function loadedSearchSource(): Promise<ISearchSource> {
     if (searchSource) {
@@ -108,6 +117,18 @@ export const FilterForm = ({ data, onResultsLoaded, enableTimeFilter = true }: F
       setPageOptions(pageOptions);
 
       await usePage(pageOptions[0].text, pageOptions[0].value.split(','), indexPattern);
+    } else {
+      eatToasts();
+      toasts.push(
+        notifications.toasts.addDanger(
+          i18n.translate(
+            'traceNetworkMap.foundTraces',
+            {defaultMessage: 'The selected index pattern contains no traces with \'page\' tag that match the given time filter.'}
+          )
+        )
+      );
+      onResultsLoaded(null, []);
+      setPageOptions([]);
     }
   }
 
@@ -120,7 +141,19 @@ export const FilterForm = ({ data, onResultsLoaded, enableTimeFilter = true }: F
       .setField('filter', traceIdFilter(actionTraceIds))
       .fetch();
 
-    onResultsLoaded(page, searchResponse.hits.hits);
+    const results = searchResponse.hits.hits;
+
+    eatToasts();
+    toasts.push(
+      notifications.toasts.addSuccess(
+        i18n.translate(
+          'traceNetworkMap.foundTraces',
+          {defaultMessage: 'Found {count} traces for page {page}.', values: {count: results.length, page}}
+        )
+      )
+    );
+
+    onResultsLoaded(page, results);
   }
 
   useAsyncEffect(async () => {
@@ -186,25 +219,14 @@ export const FilterForm = ({ data, onResultsLoaded, enableTimeFilter = true }: F
       <EuiSpacer size="m" />
 
       {
-        pageOptions.length > 0
-        ? (
-            <EuiFormRow
-              label={i18n.translate('traceNetworkMap.pageLabel', {defaultMessage: 'Page'})}>
-              <EuiSelect
-                options={pageOptions}
-                onChange={onActionChange}
-              />
-            </EuiFormRow>
-        )
-        : (
-          <EuiText>
-            <p>
-              <FormattedMessage
-                id="traceNetworkMap.noPageTraces"
-                defaultMessage="There are no traces with a 'page' tag that match the given time filter!"
-              />
-            </p>
-          </EuiText>
+        pageOptions.length > 0 && (
+          <EuiFormRow
+            label={i18n.translate('traceNetworkMap.pageLabel', {defaultMessage: 'Page'})}>
+            <EuiSelect
+              options={pageOptions}
+              onChange={onActionChange}
+            />
+          </EuiFormRow>
         )
       }
     </>
