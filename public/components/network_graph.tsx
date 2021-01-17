@@ -4,11 +4,11 @@ import {EuiText, EuiTitle } from '@elastic/eui';
 import { Result } from './filter_form';
 import Cytoscape, {Core, EdgeDefinition, NodeDefinition, StylesheetStyle} from 'cytoscape';
 import CytoscapeComponent from 'react-cytoscapejs';
-// @ts-ignore no need to define types because the layout is only used by cytoscape
+// @ts-ignore: no need to define types because the layout is only used by cytoscape
 import Dagre from 'cytoscape-dagre';
 import {render} from "../graph/svg_node";
 import {useWindowSize} from "../hooks/window_size";
-import {getServiceNodeId, NodeData, nodesFromResults} from "../node_list";
+import {NodeData, nodesFromResults} from "../node_list";
 
 Cytoscape.use(Dagre);
 
@@ -18,7 +18,7 @@ interface NetworkGraphProps {
 }
 
 export const NetworkGraph = ({ results, page }: NetworkGraphProps) => {
-  const layoutOptions = { name: 'dagre' };
+  const layoutOptions = { name: 'dagre', rankDir: 'TB' /* 'LR' */, animate: true };
 
   const cyRef = useRef<Core>();
 
@@ -28,57 +28,37 @@ export const NetworkGraph = ({ results, page }: NetworkGraphProps) => {
 
   const nodeDataElements = nodesFromResults(page, results);
   const nodeDataMap = new Map<string, NodeData>();
-  nodeDataElements.forEach(node => {
-    nodeDataMap.set(node.id, node);
-    node.hiddenChildren?.forEach(child => { nodeDataMap.set(child.id, child); });
-  });
+  nodeDataElements.forEach(node => { nodeDataMap.set(node.id, node); });
 
-  function onNodeTap(event: Cytoscape.EventObject) {
-    const nodeData = nodeDataMap.get(event.target.id());
-    if (nodeData) {
-      if (nodeData.data) {
-        setSelectedNodeData(JSON.stringify(nodeData.data, undefined, 4));
-      }
-      if (nodeData.hiddenChildren) {
-        if (nodeData.expanded) {
-          nodeData.hiddenChildren.forEach(child => {
-            if (cyRef.current) {
-              cyRef.current.remove(cyRef.current?.getElementById(child.id));
-            }
-          });
-          nodeData.expanded = false;
-        } else {
-          nodeData.hiddenChildren.forEach(child => {
-            const node = render(child.serviceName, child.title);
-            if (cyRef.current) {
-              cyRef.current.add({
-                data: {id: child.id, label: ''},
-                style: {
-                  'background-image': node.dataImage,
-                  width: node.width,
-                  height: node.height,
-                }
-              })
-              cyRef.current.add({data: {source: getServiceNodeId(nodeData), target: child.id}});
-            }
-          });
-          nodeData.expanded = true;
-        }
-        if (cyRef.current) {
-          const layout = cyRef.current.layout(layoutOptions);
-          layout.run();
-        }
-      }
-    }
-  }
-
-  useEffect(() => {
+  function layout() {
     if (cyRef.current) {
       const layout = cyRef.current.layout(layoutOptions);
       layout.run();
-
-      cyRef.current.on('tap', 'node', onNodeTap);
     }
+  }
+
+  function onNodeTap(event: Cytoscape.EventObject) {
+    const tappedNode = event.target;
+
+    const nodeData = nodeDataMap.get(tappedNode.id());
+    if (nodeData?.data) {
+      setSelectedNodeData(JSON.stringify(nodeData.data, undefined, 4));
+    }
+
+    const children = tappedNode.connectedEdges().targets().filter(
+      (child: Cytoscape.NodeSingular) => !child.anySame(tappedNode)
+    );
+    if (children.length > 0 && children[0].style('display') === 'none') {
+      children.style('display', 'element');
+    } else {
+      tappedNode.successors().targets().style('display', 'none');
+    }
+    layout();
+  }
+
+  useEffect(() => {
+    layout();
+    cyRef.current?.on('tap', 'node', onNodeTap);
 
     return () => {
       setSelectedNodeData('');
@@ -94,6 +74,7 @@ export const NetworkGraph = ({ results, page }: NetworkGraphProps) => {
         'background-image': node.dataImage,
         width: node.width,
         height: node.height,
+        display: element.hidden ? 'none' : 'element',
       }
     };
   });

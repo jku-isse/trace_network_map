@@ -4,6 +4,7 @@ export interface NodeData {
   id: string;
   serviceName: string;
   title: string;
+  hidden: boolean;
   kind?: Kind;
   parentId?: string;
   data?: {
@@ -11,9 +12,7 @@ export interface NodeData {
     client?: ResultSource,
     server?: ResultSource,
     trace?: ResultSource,
-  },
-  hiddenChildren?: Array<NodeData>;
-  expanded?: boolean;
+  };
 }
 
 const collapsedServices = ['redis', 'mysql', 'S3'];
@@ -23,6 +22,7 @@ export function nodesFromResults(page: string, results: Result[]): NodeData[] {
     id: page,
     serviceName: 'page',
     title: page,
+    hidden: false,
   }].concat(
     results.map(result => {
       const source = result._source;
@@ -32,6 +32,7 @@ export function nodesFromResults(page: string, results: Result[]): NodeData[] {
         title: source.name,
         parentId: 'parentId' in source ? source.parentId : page,
         data: { trace: source },
+        hidden: false,
       };
       if (source.kind != null) {
         node.kind = source.kind;
@@ -64,10 +65,9 @@ export function nodesFromResults(page: string, results: Result[]): NodeData[] {
       const serviceNodeId = getServiceNodeId(node);
       const serviceNode = serviceNodeMap.get(serviceNodeId);
       if (serviceNode) {
-        serviceNode.hiddenChildren?.push(node);
-        serviceNode.title = serviceNode.hiddenChildren?.length + ' Operations';
         if (node.data && node.data.trace && serviceNode.data && serviceNode.data.operations) {
           serviceNode.data.operations.push(node.data.trace);
+          serviceNode.title = serviceNode.data.operations.length + ' Operations';
         }
       } else {
         serviceNodeMap.set(serviceNodeId, {
@@ -75,11 +75,12 @@ export function nodesFromResults(page: string, results: Result[]): NodeData[] {
           serviceName: node.serviceName,
           title: '1 Operation',
           parentId: node.parentId,
-          hiddenChildren: [node],
           data: {operations: node.data && node.data.trace ? [node.data.trace] : []},
+          hidden: false,
         })
       }
-      removeNodeIds.set(node.id, true);
+      node.parentId = serviceNodeId;
+      node.hidden = true;
     }
   });
 
