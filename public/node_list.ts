@@ -3,11 +3,10 @@ import {Kind, Result, ResultSource} from "./components/filter_form";
 export interface NodeData {
   id: string;
   serviceName: string;
-  title: string;
   hidden: boolean;
   kind?: Kind;
   parentId?: string;
-  data?: {
+  data: {
     operations?: Array<ResultSource>,
     client?: ResultSource,
     server?: ResultSource,
@@ -15,21 +14,20 @@ export interface NodeData {
   };
 }
 
-const collapsedServices = ['redis', 'mysql', 'S3'];
+const collapsedServices = ['redis', 'mysql', 's3'];
 
 export function nodesFromResults(page: string, results: Result[]): NodeData[] {
   let nodeList: Array<NodeData> = [{
     id: page,
     serviceName: 'page',
-    title: page,
     hidden: false,
+    data: {},
   }].concat(
     results.map(result => {
       const source = result._source;
       const node: NodeData = {
         id: source.id,
         serviceName: source.remoteEndpoint ? source.remoteEndpoint.serviceName : source.localEndpoint.serviceName,
-        title: source.name,
         parentId: 'parentId' in source ? source.parentId : page,
         data: { trace: source },
         hidden: false,
@@ -67,13 +65,11 @@ export function nodesFromResults(page: string, results: Result[]): NodeData[] {
       if (serviceNode) {
         if (node.data && node.data.trace && serviceNode.data && serviceNode.data.operations) {
           serviceNode.data.operations.push(node.data.trace);
-          serviceNode.title = serviceNode.data.operations.length + ' Operations';
         }
       } else {
         serviceNodeMap.set(serviceNodeId, {
           id: serviceNodeId,
           serviceName: node.serviceName,
-          title: '1 Operation',
           parentId: node.parentId,
           data: {operations: node.data && node.data.trace ? [node.data.trace] : []},
           hidden: false,
@@ -87,6 +83,6 @@ export function nodesFromResults(page: string, results: Result[]): NodeData[] {
   return nodeList.filter(node => !removeNodeIds.has(node.id)).concat([...serviceNodeMap.values()]);
 }
 
-export function getServiceNodeId(node: NodeData): string {
+function getServiceNodeId(node: NodeData): string {
   return [node.serviceName, node.parentId].join('-');
 }

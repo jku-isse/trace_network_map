@@ -67,7 +67,7 @@ export const NetworkGraph = ({ results, page }: NetworkGraphProps) => {
   }, [page, results]);
 
   const nodes: NodeDefinition[] = nodeDataElements.map(element => {
-    const node = render(element.serviceName, element.title);
+    const node = render(element);
     return {
       data: { id: element.id, label: '' },
       style: {
