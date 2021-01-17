@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { FormattedMessage, I18nProvider } from '@kbn/i18n/react';
 import { BrowserRouter as Router } from 'react-router-dom';
+import { i18n } from '@kbn/i18n';
 
 import {
-  EuiHorizontalRule,
   EuiPage,
   EuiPageBody,
   EuiPageContent,
   EuiPageContentBody,
-  EuiPageContentHeader,
   EuiPageHeader,
+  EuiSpacer,
   EuiTitle,
 } from '@elastic/eui';
 
@@ -22,13 +22,10 @@ import { PLUGIN_ID, PLUGIN_NAME } from '../../common';
 
 import { FilterForm, Result } from './filter_form';
 import { NetworkGraph } from './network_graph';
-import { TraceList } from './trace_list';
-import { BackendFetchExample } from './backend_fetch_example';
 
 interface TraceNetworkMapAppDeps {
   basename: string;
   notifications: CoreStart['notifications'];
-  http: CoreStart['http'];
   navigation: NavigationPublicPluginStart;
   data: DataPublicPluginStart;
 }
@@ -36,7 +33,6 @@ interface TraceNetworkMapAppDeps {
 export const TraceNetworkMapApp = ({
   basename,
   notifications,
-  http,
   navigation,
   data
 }: TraceNetworkMapAppDeps) => {
@@ -46,6 +42,13 @@ export const TraceNetworkMapApp = ({
   const onResultsLoaded = async (page: string, results: Result[]) => {
     setPage(page);
     setResults(results);
+
+    notifications.toasts.addSuccess(
+      i18n.translate(
+        'traceNetworkMap.foundTraces',
+        {defaultMessage: 'Found {count} traces for page {page}.', values: {count: results.length, page}}
+      )
+    );
   };
 
   const params = new URLSearchParams(window.location.search);
@@ -76,27 +79,10 @@ export const TraceNetworkMapApp = ({
                 </EuiTitle>
               </EuiPageHeader>
               <EuiPageContent>
-                <EuiPageContentHeader>
-                  <EuiTitle>
-                    <h2>
-                      <FormattedMessage
-                        id="traceNetworkMap.subtitle"
-                        defaultMessage="Interactive visualization for zipkin traces"
-                      />
-                    </h2>
-                  </EuiTitle>
-                </EuiPageContentHeader>
                 <EuiPageContentBody>
-                  <BackendFetchExample http={http} notifications={notifications} />
                   <FilterForm data={data} onResultsLoaded={onResultsLoaded} enableTimeFilter={enableTimeFilter} />
-                  <EuiHorizontalRule />
-                  {
-                    results && page &&
-                      <>
-                        <NetworkGraph results={results} page={page} />
-                        <TraceList results={results} />
-                      </>
-                  }
+                  <EuiSpacer size="m" />
+                  { results && page && <NetworkGraph results={results} page={page} /> }
                 </EuiPageContentBody>
               </EuiPageContent>
             </EuiPageBody>

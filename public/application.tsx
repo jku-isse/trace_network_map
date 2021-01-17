@@ -5,7 +5,7 @@ import { AppPluginStartDependencies } from './types';
 import { TraceNetworkMapApp } from './components/app';
 
 export const renderApp = (
-  { notifications, http }: CoreStart,
+  { notifications }: CoreStart,
   { navigation, data }: AppPluginStartDependencies,
   { appBasePath, element }: AppMountParameters
 ) => {
@@ -13,7 +13,6 @@ export const renderApp = (
     <TraceNetworkMapApp
       basename={appBasePath}
       notifications={notifications}
-      http={http}
       navigation={navigation}
       data={data}
     />,

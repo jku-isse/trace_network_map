@@ -6,6 +6,7 @@ import {
   EuiText,
   EuiSelectOption,
   EuiFormRow,
+  EuiSpacer,
 } from '@elastic/eui';
 import { i18n } from '@kbn/i18n';
 import {rootTraceFilter, traceIdFilter} from "../search/filters";
@@ -167,10 +168,12 @@ export const FilterForm = ({ data, onResultsLoaded, enableTimeFilter = true }: F
         <p>
           <FormattedMessage
             id="traceNetworkMap.content"
-            defaultMessage="Select an index pattern and load the network graph for a specific page!"
+            defaultMessage="Select an index pattern which contains page-traces and load the service map for a specific page!"
           />
         </p>
       </EuiText>
+
+      <EuiSpacer size="m" />
 
       <EuiFormRow
         label={i18n.translate('traceNetworkMap.indexPatternLabel', {defaultMessage: 'Index pattern'})}>
@@ -179,6 +182,8 @@ export const FilterForm = ({ data, onResultsLoaded, enableTimeFilter = true }: F
           onChange={onIndexPatternChange}
         />
       </EuiFormRow>
+
+      <EuiSpacer size="m" />
 
       {
         pageOptions.length > 0
