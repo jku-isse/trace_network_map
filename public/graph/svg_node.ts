@@ -13,21 +13,27 @@ export function render(node: NodeData): SvgNode {
   const serviceName = getServiceName(node);
   const name = getName(node);
   const result = getResult(node);
+  const duration = getDuration(node);
 
-  const width = Math.max(serviceName.length, name.length, (result ? result.length : 0)) > 20 ? 300 : 200;
-  const height = result ? 70 : 60;
+  const width = Math.max(serviceName.length, name.length, (result ? result.text.length : 0)) > 20 ? 300 : 200;
+  const height = result || duration ? 70 : 60;
 
-  const resultNodeStr = result ? `<text x="10" y="60" class="info">${result}</text>` : '';
+  const resultNodeStr = result ? `<text x="10" y="60" class="info ${result.className}">${result.text}</text>` : '';
+  const durationNodeStr = duration ? `<text x="${width - 40}" y="60" class="duration">${duration}</text>` : '';
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
       <style>
-        .info { fill: grey; font: bold 10px sans-serif; }
+        .info { fill: lightblue; font: bold 10px sans-serif; }
+        .duration { fill: lightgrey; font: 10px sans-serif; }
         .name { fill: white; font: normal 16px sans-serif; }
+        .info.success { fill: lightgreen; }
+        .info.error { fill: lightcoral; }
       </style>
 
       <text x="10" y="20" class="info">${serviceName}</text>
       <text x="10" y="40" class="name">${name}</text>
       ${resultNodeStr}
+      ${durationNodeStr}
     </svg>`;
 
   return {
@@ -71,48 +77,77 @@ function getName(node: NodeData): string {
   }
 }
 
-function getResult(node: NodeData): string|null {
+function getResult(node: NodeData): {className: string, text: string}|null {
   if (node.data.trace?.remoteEndpoint?.serviceName === 's3') {
     if (node.data.trace.tags['result.exists']) {
       return toBool(node.data.trace.tags['result.exists'])
-        ? i18n.translate('traceNetworkMap.yes', {defaultMessage: 'yes'})
-        : i18n.translate('traceNetworkMap.no', {defaultMessage: 'no'})
+        ? { className: 'success', text: i18n.translate('traceNetworkMap.yes', {defaultMessage: 'yes'}) }
+        : { className: 'error', text: i18n.translate('traceNetworkMap.no', {defaultMessage: 'no'}) }
     } else if (node.data.trace.tags['result.count']) {
       const count = node.data.trace.tags['result.count'];
-      return count + ' ' + (
+      const text = count + ' ' + (
         count === '1'
           ? i18n.translate('traceNetworkMap.object', {defaultMessage: 'object'})
           : i18n.translate('traceNetworkMap.objects', {defaultMessage: 'objects'})
       );
+      return {text, className: count === '0' ? 'error' : 'success'};
     } else {
       return null;
     }
   } else if (node.data.trace?.remoteEndpoint?.serviceName === 'mysql') {
     const count = node.data.trace.tags['result.count'];
-    return count + ' ' + (
+    const text = count + ' ' + (
       count === '1'
         ? i18n.translate('traceNetworkMap.row', {defaultMessage: 'row'})
         : i18n.translate('traceNetworkMap.rows', {defaultMessage: 'rows'})
     );
+    return {text, className: count === '0' ? 'error' : 'success'};
   } else if (node.data.trace?.remoteEndpoint?.serviceName === 'redis') {
     if (node.data.trace.tags['result.exists']) {
-      return toBool(node.data.trace.tags['result.exists'])
-        ? i18n.translate('traceNetworkMap.yes', {defaultMessage: 'yes'})
-        : i18n.translate('traceNetworkMap.no', {defaultMessage: 'no'})
+      if (toBool(node.data.trace.tags['result.exists'])) {
+        return {text: i18n.translate('traceNetworkMap.yes', {defaultMessage: 'yes'}), className: 'success'};
+      } else {
+        return {text: i18n.translate('traceNetworkMap.no', {defaultMessage: 'no'}), className: 'error'};
+      }
     } else if (node.data.trace.tags['result.success']) {
-      return toBool(node.data.trace.tags['result.success'])
-        ? i18n.translate('traceNetworkMap.successful', {defaultMessage: 'successful'})
-        : i18n.translate('traceNetworkMap.notSuccessful', {defaultMessage: 'not successful'})
+      if (toBool(node.data.trace.tags['result.success'])) {
+        return {text: i18n.translate('traceNetworkMap.successful', {defaultMessage: 'successful'}), className: 'success'};
+      } else {
+        return {text: i18n.translate('traceNetworkMap.notSuccessful', {defaultMessage: 'not successful'}), className: 'error'};
+      }
     } else {
       return null;
     }
   } else if (node.data.client?.localEndpoint?.serviceName === 'web-frontend') {
-    return i18n.translate('traceNetworkMap.status', {defaultMessage: 'status'})
-      + ' '
-      + node.data.client.tags['http.status_code'] || unknown;
+    const status = node.data.client.tags['http.status_code'];
+    const text = i18n.translate('traceNetworkMap.status', {defaultMessage: 'status'}) + ' ' + (status || unknown);
+    const className = (status && Number.parseInt(status, 10) < 400) ? 'success' : 'error';
+    return {text, className};
   } else {
     return null;
   }
+}
+
+function getDuration(node: NodeData): string|null {
+  if (node.data.trace?.duration) {
+    return toTimeStr(Number.parseInt(node.data.trace.duration, 10));
+  } else if (node.data.server?.duration) {
+    return toTimeStr(Number.parseInt(node.data.server.duration, 10));
+  } else if (node.data.operations) {
+    let duration = 0;
+    node.data.operations.forEach(operation => {
+      if (operation.duration) {
+        duration = duration + Number.parseInt(operation.duration, 10);
+      }
+    });
+    return toTimeStr(duration);
+  } else {
+    return null;
+  }
+}
+
+function toTimeStr(value: number): string {
+  return value > 1000000 ? Math.round(value / 1000000) + 's' : Math.round(value / 1000) + 'ms';
 }
 
 function toBool(value: string) {
