@@ -20,7 +20,7 @@ import { DataPublicPluginStart } from 'src/plugins/data/public';
 import { PLUGIN_ID, PLUGIN_NAME } from '../../common';
 
 import { FilterForm, Result } from './filter_form';
-import { NetworkGraph } from './network_graph';
+import { Graph } from './graph';
 
 interface TraceNetworkMapAppDeps {
   basename: string;
@@ -78,7 +78,7 @@ export const TraceNetworkMapApp = ({
                     enableTimeFilter={enableTimeFilter}
                     notifications={notifications} />
                   <EuiSpacer size="m" />
-                  { results && page && <NetworkGraph results={results} page={page} /> }
+                  { results && page && <Graph results={results} page={page} /> }
                 </EuiPageContentBody>
               </EuiPageContent>
             </EuiPageBody>
