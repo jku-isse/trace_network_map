@@ -1,6 +1,13 @@
 import React, {useEffect, useRef, useState} from 'react';
 import { FormattedMessage } from '@kbn/i18n/react';
-import {EuiButtonGroup, EuiFormRow, EuiLink, EuiSpacer, EuiText, EuiTitle } from '@elastic/eui';
+import {
+  EuiButtonGroup,
+  EuiFormRow,
+  EuiLink,
+  EuiSpacer,
+  EuiText,
+  EuiTitle
+} from '@elastic/eui';
 import { Result } from './filter_form';
 import Cytoscape, {Core, EdgeDefinition, NodeDefinition, StylesheetStyle} from 'cytoscape';
 import CytoscapeComponent from 'react-cytoscapejs';
@@ -10,6 +17,7 @@ import {render} from "../graph/svg_node";
 import {useWindowSize} from "../hooks/window_size";
 import {NodeData, nodesFromResults} from "../node_list";
 import { i18n } from '@kbn/i18n';
+import {Zoom} from "./graph/zoom";
 
 Cytoscape.use(Dagre);
 
@@ -179,6 +187,8 @@ export const NetworkGraph = ({ results, page }: NetworkGraphProps) => {
         }}
         stylesheet={styles}
       />
+      <EuiSpacer size="s" />
+      <Zoom cyRef={cyRef} />
       {
         selectedNode && selectedNodeData && (
           <>
