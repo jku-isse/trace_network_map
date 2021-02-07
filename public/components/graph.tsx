@@ -9,11 +9,11 @@ import Cytoscape, {Core, EdgeDefinition, NodeDefinition, NodeSingular, Styleshee
 import CytoscapeComponent from 'react-cytoscapejs';
 // @ts-ignore: no need to define types because the layout is only used by cytoscape
 import Dagre from 'cytoscape-dagre';
-import {render} from "../graph/svg_node";
+import {render} from "../node/svg";
 import {useWindowSize} from "../hooks/window_size";
-import {NodeData, nodesFromResults} from "../node_list";
 import {Zoom} from "./graph/zoom";
 import { NodeDetails } from './graph/node_details';
+import {NodeData, nodeDataFromResults} from "../node/data";
 
 Cytoscape.use(Dagre);
 
@@ -33,9 +33,9 @@ export const Graph = ({ results, page }: GraphProps) => {
 
   const windowSize = useWindowSize();
 
-  const nodeDataElements = nodesFromResults(page, results);
+  const nodeDataElements = nodeDataFromResults(page, results);
   const nodeDataMap = new Map<string, NodeData>();
-  nodeDataElements.forEach(node => { nodeDataMap.set(node.id, node); });
+  nodeDataElements.forEach(node => { nodeDataMap.set(node.getId(), node); });
 
   function layout() {
     if (cyRef.current) {
@@ -74,10 +74,8 @@ export const Graph = ({ results, page }: GraphProps) => {
     setChildrenVisible(nodeChildrenAreVisible);
 
     const nodeData = nodeDataMap.get(tappedNode.id());
-    if (nodeData?.data) {
-      setSelectedNode(tappedNode);
-      setSelectedNodeData(nodeData);
-    }
+    setSelectedNode(tappedNode);
+    setSelectedNodeData(nodeData);
 
     if (event.originalEvent.altKey) {
       if (nodeChildrenAreVisible) {
@@ -109,26 +107,29 @@ export const Graph = ({ results, page }: GraphProps) => {
     };
   }, [page, results]);
 
-  const nodes: NodeDefinition[] = nodeDataElements.map(element => {
-    const node = render(element);
+  const nodes: NodeDefinition[] = nodeDataElements.map(nodeData => {
+    const node = render(nodeData);
     return {
-      data: { id: element.id, label: '' },
+      data: { id: nodeData.getId(), label: '' },
       style: {
         'background-image': node.dataImage,
         width: node.width,
         height: node.height,
-        display: element.hidden ? 'none' : 'element',
+        display: nodeData.initiallyHidden() ? 'none' : 'element',
       }
     };
   });
 
   const edges: EdgeDefinition[] = [];
-  nodeDataElements.filter(element => 'parentId' in element).forEach(element => {
-    nodeDataElements.forEach(parentCandidate => {
-      if (element.parentId === parentCandidate.id) {
-        edges.push({ data: {source: parentCandidate.id, target: element.id}});
-      }
-    });
+  nodeDataElements.forEach(element => {
+    const parentId = element.getParentId();
+    if (parentId) {
+      nodeDataElements.forEach(parentCandidate => {
+        if (parentId === parentCandidate.getId()) {
+          edges.push({ data: {source: parentCandidate.getId(), target: element.getId()}});
+        }
+      });
+    }
   });
 
   const styles: StylesheetStyle[] = [

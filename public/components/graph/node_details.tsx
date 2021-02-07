@@ -1,5 +1,5 @@
 import React from "react";
-import {NodeData} from "../../node_list";
+import {NodeData} from "../../node/data";
 import {EuiButtonGroup, EuiFormRow, EuiLink, EuiSpacer, EuiText, EuiTitle } from "@elastic/eui";
 import { FormattedMessage } from '@kbn/i18n/react';
 import { i18n } from '@kbn/i18n';
@@ -12,11 +12,6 @@ interface NodeDetailsProps {
 }
 
 export const NodeDetails = ({ data, hasChildren, childrenVisible, onChildVisibilityChange }: NodeDetailsProps) => {
-
-  function getZipkinLink(id: string) {
-    return 'http://127.0.0.1:9411/zipkin/traces/' + id;
-  }
-
   const toggleButtons = [
     {
       id: `childrenVisible`,
@@ -27,6 +22,8 @@ export const NodeDetails = ({ data, hasChildren, childrenVisible, onChildVisibil
       label: i18n.translate('traceNetworkMap.visible', {defaultMessage: 'hidden'}),
     },
   ];
+
+  const zipkinLink = data.getZipkinLink();
 
   return (
     <>
@@ -53,10 +50,10 @@ export const NodeDetails = ({ data, hasChildren, childrenVisible, onChildVisibil
       }
       <EuiSpacer size="m" />
       {
-        data.data.client && (
+        zipkinLink && (
           <>
             <p>
-              <EuiLink href={getZipkinLink(data.data.client.id)} external>
+              <EuiLink href={zipkinLink} external>
                 <FormattedMessage id="traceNetworkMap.traceServerTimeline" defaultMessage="Zipkin timeline" />
               </EuiLink>
             </p>
@@ -68,11 +65,11 @@ export const NodeDetails = ({ data, hasChildren, childrenVisible, onChildVisibil
         <FormattedMessage
           id="traceNetworkMap.traceData"
           defaultMessage="Trace data"
-        />function
+        />
       </p>
       <EuiSpacer size="s" />
       <EuiText>
-        <pre>{JSON.stringify(data.data, undefined, 4)}</pre>
+        <pre>{JSON.stringify(data.getTraceData(), undefined, 4)}</pre>
       </EuiText>
     </>
   );

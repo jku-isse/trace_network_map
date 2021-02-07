@@ -27,6 +27,7 @@ export interface ResultSource {
     hash?: string,
     name?: string,
     key?: string,
+    page?: string,
     'http.path'?: string,
     'result.count'?: string,
     'result.exists'?: string,
