@@ -1,6 +1,6 @@
 import {NodeData, ResultSummary, toTimeStr} from "../data";
 import {i18n} from '@kbn/i18n';
-import {ResultSource} from "../../components/filter_form";
+import {ResultSource} from "../../search/result";
 import {S3} from "./s3";
 import {MySql} from "./mysql";
 import {Redis} from "./redis";

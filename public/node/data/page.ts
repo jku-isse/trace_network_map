@@ -1,5 +1,5 @@
 import {NodeData, ResultSummary} from "../data";
-import {ResultSource} from "../../components/filter_form";
+import {ResultSource} from "../../search/result";
 
 export class Page implements NodeData {
   static readonly SERVICE_NAME = 'page';

@@ -1,6 +1,6 @@
 import {i18n} from '@kbn/i18n';
 import {NodeData, ResultSummary, toTimeStr} from "../data";
-import {Kind, ResultSource} from "../../components/filter_form";
+import {Kind, ResultSource} from "../../search/result";
 
 export class Api implements NodeData {
   static readonly SERVICE_NAME = 'api';

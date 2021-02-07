@@ -19,7 +19,8 @@ import { DataPublicPluginStart } from 'src/plugins/data/public';
 
 import { PLUGIN_ID, PLUGIN_NAME } from '../../common';
 
-import { FilterForm, Result } from './filter_form';
+import { FilterForm } from './filter_form';
+import { Result } from '../search/result';
 import { Graph } from './graph';
 
 interface TraceNetworkMapAppDeps {

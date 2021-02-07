@@ -1,4 +1,4 @@
-import {Result, ResultSource} from "../components/filter_form";
+import {Result, ResultSource} from "../search/result";
 import {S3} from "./data/s3";
 import {MySql} from "./data/mysql";
 import {Redis} from "./data/redis";

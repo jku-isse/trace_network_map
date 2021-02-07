@@ -1,6 +1,6 @@
 import {i18n} from '@kbn/i18n';
 import {NodeData, ResultSummary, toBool, toTimeStr} from "../data";
-import {ResultSource} from "../../components/filter_form";
+import {ResultSource} from "../../search/result";
 import {Service} from "./service";
 
 export class S3 implements NodeData {
