@@ -42,6 +42,8 @@ These classes defined which information from the traces is displayed in the serv
 nodes to aggregate and group traces for a better overview. To extend the traces a specific node-data-class needs to be 
 created and registered in public/node/data.ts.
 
+The [Laminas Tracing Module](https://github.com/noah-kogler/laminas_tracing_module) provides tools to create traces in the right format.
+
 Traces are recognized by their <code>localEndpoint</code> or their <code>remoteEndpoint</code>. Additional tags must
 be set to provide the service map with the required information.
 The following traces are supported:
