@@ -10,7 +10,7 @@ The traces have to contain certain tags and attributes to get displayed correctl
 Prerequisites: Elasticsearch and Kibana 7.10.0
 
 <code>
-./bin/kibana-plugin install https://github.com/noah-kogler/trace_network_map/blob/master/build/traceNetworkMap-7.10.0.zip
+./bin/kibana-plugin install https://github.com/noah-kogler/trace_network_map/blob/main/build/traceNetworkMap-7.10.0.zip?raw=true
 </code>
 
 ## Development
